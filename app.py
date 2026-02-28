@@ -1,9 +1,14 @@
 import streamlit as st
 import requests
+import os
+from dotenv import load_dotenv
+
+# .env file se variables load karne ke liye
+load_dotenv()
 
 # --- CONFIGURATION ---
-# Replace this with your n8n Production Webhook URL
-
+# Ab URL directly .env file se aayega
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 
 # --- PAGE SETUP ---
 st.set_page_config(
@@ -28,7 +33,6 @@ with st.sidebar:
     """)
     st.divider()
     
-    # Adding a quick reset button for your convenience
     if st.button("🗑️ Clear Chat History"):
         st.session_state.messages = []
         st.rerun()
@@ -37,28 +41,22 @@ with st.sidebar:
 st.title("💬 Welcome back, Sohaib")
 st.markdown("What are we getting done today?")
 
-# Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat messages from history on app rerun
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # --- CHAT INPUT & LOGIC ---
 if prompt := st.chat_input("Ask me to schedule a meeting, check emails, or log an expense..."):
-    # 1. Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
-    # 2. Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 3. Send request to n8n Webhook
     with st.chat_message("assistant"):
         with st.spinner("Executing..."):
             try:
-                # The payload matches the JSON structure your n8n webhook expects
                 payload = {
                     "name": "Sohaib",
                     "message": prompt
@@ -68,11 +66,10 @@ if prompt := st.chat_input("Ask me to schedule a meeting, check emails, or log a
                 if response.status_code == 200:
                     result_data = response.json()
                     
-                    # --- THE FIX: Handle both List and Dictionary outputs from n8n ---
                     if isinstance(result_data, list) and len(result_data) > 0:
-                        bot_reply = result_data[0].get("output", "Task completed! (No specific output text provided by agent)")
+                        bot_reply = result_data[0].get("output", "Task completed!")
                     elif isinstance(result_data, dict):
-                        bot_reply = result_data.get("output", "Task completed! (No specific output text provided by agent)")
+                        bot_reply = result_data.get("output", "Task completed!")
                     else:
                         bot_reply = f"Done! Raw response: {result_data}"
                     
